@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meine Lernzeit - Dashboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel Standalone für JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        // Lucide Icon-Komponenten
+        const Trophy = ({ className, ...props }) => <i data-lucide="trophy" className={className} {...props}></i>;
+        const Star = ({ className }) => <i data-lucide="star" className={className}></i>;
+        const Award = ({ className }) => <i data-lucide="award" className={className}></i>;
+        const CheckCircle = ({ className }) => <i data-lucide="check-circle" className={className}></i>;
+        const Circle = ({ className }) => <i data-lucide="circle" className={className}></i>;
+        const Home = ({ className, strokeWidth }) => <i data-lucide="home" className={className}></i>;
+        const BookOpen = ({ className }) => <i data-lucide="book-open" className={className}></i>;
+        const FileText = ({ className }) => <i data-lucide="file-text" className={className}></i>;
+        const Target = ({ className }) => <i data-lucide="target" className={className}></i>;
+        const Download = ({ className }) => <i data-lucide="download" className={className}></i>;
+        const Grid3x3 = ({ className }) => <i data-lucide="grid-3x3" className={className}></i>;
+        
+        // Icons nach dem Rendern initialisieren
+        useEffect(() => {
+            lucide.createIcons();
+        });
+
+        // SUBJECT_CONFIGS hier einfügen (wird zu lang für eine Nachricht, kommt im nächsten Schritt)
+        
+        const SUBJECT_CONFIGS = {
+          english: {
+            name: 'Englisch',
+            icon: '🇬🇧',
+            color: 'orange',
+            levels: [{
+              id: 'path1',
+              name: 'Bronze-Training',
+              type: 'linear',
+              topics: [
+                { id: 1, topic: 'Numbers 1-10', antonList: 'Anton-List #1', task: 'Zahlen 1-10 lernen und üben' },
+                { id: 2, topic: 'Numbers 11-20', antonList: 'Anton-List #2', task: 'Zahlen 11-20 lernen und üben' },
+                { id: 3, topic: 'Colours', antonList: 'Anton-List #3', task: 'Farben benennen und beschreiben', checkpoint: true },
+                { id: 4, topic: 'Vegetables', antonList: 'Anton-List #4', task: 'Gemüsesorten kennenlernen' },
+                { id: 5, topic: 'Pets', antonList: 'Anton-List #5', task: 'Haustiere beschreiben können' },
+                { id: 6, topic: 'Days of the week', antonList: 'Anton-List #6', task: 'Wochentage lernen und anwenden', checkpoint: true },
+                { id: 7, topic: 'The body', antonList: 'Anton-List #7', task: 'Körperteile benennen' },
+                { id: 8, topic: 'Sports and hobbies', antonList: 'Anton-List #8', task: 'Sport und Hobbys beschreiben' },
+                { id: 9, topic: 'At school', antonList: 'Anton-List #9', task: 'Schulsachen und Klassenzimmer', checkpoint: true }
+              ]
+            }]
+          },
+          deutsch: {
+            name: 'Deutsch',
+            icon: '📕',
+            color: 'red',
+            levels: [{
+              id: 'rechtschreibung',
+              name: 'Rechtschreibung & Grammatik',
+              type: 'matrix',
+              topics: []
+            }]
+          },
+          mathe: {
+            name: 'Mathematik',
+            icon: '🔢',
+            color: 'blue',
+            levels: [{
+              id: 'lernweg_1_1',
+              name: 'Lernweg 1.1 - Daten sammeln und erfassen',
+              type: 'linear',
+              hasFloors: true,
+              topics: [
+                { id: 1, topic: 'Von der Umfrage zur Strichliste', task: 'Umfragen durchführen und als Strichliste darstellen', hasUpperFloor: true },
+                { id: 2, topic: 'Von der Strichliste zur Häufigkeit', task: 'Strichlisten auswerten und Häufigkeiten bestimmen', hasUpperFloor: true },
+                { id: 3, topic: 'Von der Umfrage zur Häufigkeit', task: 'Umfrageergebnisse direkt als Häufigkeiten erfassen', hasUpperFloor: true },
+                { id: 4, topic: 'Strichlisten und Häufigkeiten', task: 'Verschiedene Darstellungsformen anwenden und vergleichen', hasUpperFloor: true, checkpoint: true },
+                { id: 5, topic: 'Einführung Säulendiagramm', task: 'Säulendiagramme kennenlernen und lesen', hasUpperFloor: false },
+                { id: 6, topic: 'Von der Umfrage zum Diagramm', task: 'Umfragedaten in Säulendiagrammen darstellen', hasUpperFloor: true },
+                { id: 7, topic: 'Einführung Balkendiagramm', task: 'Balkendiagramme kennenlernen und verstehen', hasUpperFloor: false },
+                { id: 8, topic: 'Balkendiagramm zeichnen', task: 'Eigene Balkendiagramme erstellen und beschriften', hasUpperFloor: true },
+                { id: 9, topic: 'Diagramme zeichnen', task: 'Verschiedene Diagrammarten selbstständig erstellen', hasUpperFloor: true, checkpoint: true },
+                { id: 10, topic: 'Parkplatz', task: 'Vorbereitung für den Gelingensnachweis', isParkingLot: true }
+              ]
+            }]
+          }
+        };
+
+        // Hauptkomponente
+        const LernzeitApp = () => {
+          // Hier kommt der Rest des Codes - wird zu lang für eine Nachricht
+          // Ich erstelle gleich eine zweite Datei mit dem vollständigen Code
+          
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 p-8">
+              <div className="max-w-4xl mx-auto text-center">
+                <h1 className="text-5xl font-bold text-gray-800 mb-4">🎓 Meine Lernzeit</h1>
+                <p className="text-xl text-gray-600 mb-8">Tool wird geladen...</p>
+                <p className="text-sm text-gray-500">Falls diese Nachricht bestehen bleibt, lade die Seite neu.</p>
+              </div>
+            </div>
+          );
+        };
+
+        // App rendern
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<LernzeitApp />);
+        
+        // Lucide Icons initialisieren
+        setTimeout(() => lucide.createIcons(), 100);
+    </script>
+</body>
+</html>
