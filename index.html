@@ -45,12 +45,7 @@
         const Download = ({ className }) => <i data-lucide="download" className={className}></i>;
         const Grid3x3 = ({ className }) => <i data-lucide="grid-3x3" className={className}></i>;
         
-        // Icons nach dem Rendern initialisieren
-        useEffect(() => {
-            lucide.createIcons();
-        });
-
-        // SUBJECT_CONFIGS hier einfügen (wird zu lang für eine Nachricht, kommt im nächsten Schritt)
+        // SUBJECT_CONFIGS
         
         const SUBJECT_CONFIGS = {
           english: {
@@ -110,17 +105,204 @@
           }
         };
 
+        const COLOR_MAP = {
+          orange: { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-700', progress: 'bg-orange-500', header: 'bg-orange-500' },
+          red:    { bg: 'bg-red-100',    border: 'border-red-300',    text: 'text-red-700',    progress: 'bg-red-500',    header: 'bg-red-500'    },
+          blue:   { bg: 'bg-blue-100',   border: 'border-blue-300',   text: 'text-blue-700',   progress: 'bg-blue-500',   header: 'bg-blue-500'   },
+        };
+
         // Hauptkomponente
         const LernzeitApp = () => {
-          // Hier kommt der Rest des Codes - wird zu lang für eine Nachricht
-          // Ich erstelle gleich eine zweite Datei mit dem vollständigen Code
-          
+          const [currentView, setCurrentView] = useState('home');
+          const [currentSubject, setCurrentSubject] = useState(null);
+          const [completedTopics, setCompletedTopics] = useState(() => {
+            try { return JSON.parse(localStorage.getItem('lernzeit_progress') || '{}'); }
+            catch { return {}; }
+          });
+
+          useEffect(() => {
+            lucide.createIcons();
+          });
+
+          useEffect(() => {
+            localStorage.setItem('lernzeit_progress', JSON.stringify(completedTopics));
+          }, [completedTopics]);
+
+          const toggleTopic = (subjectKey, levelId, topicId) => {
+            const key = `${subjectKey}_${levelId}_${topicId}`;
+            setCompletedTopics(prev => ({ ...prev, [key]: !prev[key] }));
+          };
+
+          const isCompleted = (subjectKey, levelId, topicId) =>
+            !!completedTopics[`${subjectKey}_${levelId}_${topicId}`];
+
+          const getProgress = (subjectKey) => {
+            let total = 0, completed = 0;
+            SUBJECT_CONFIGS[subjectKey].levels.forEach(level =>
+              level.topics.forEach(topic => {
+                total++;
+                if (isCompleted(subjectKey, level.id, topic.id)) completed++;
+              })
+            );
+            return { total, completed };
+          };
+
+          if (currentView === 'subject' && currentSubject) {
+            const subject = SUBJECT_CONFIGS[currentSubject];
+            const colors = COLOR_MAP[subject.color];
+            const level = subject.levels[0];
+
+            return (
+              <div className="min-h-screen bg-gray-50">
+                <div className={`${colors.header} text-white p-4 shadow-md`}>
+                  <div className="max-w-4xl mx-auto flex items-center gap-4">
+                    <button
+                      onClick={() => setCurrentView('home')}
+                      className="bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full p-2 transition"
+                    >
+                      <Home className="w-5 h-5" />
+                    </button>
+                    <h1 className="text-2xl font-bold">{subject.icon} {subject.name}</h1>
+                  </div>
+                </div>
+
+                <div className="max-w-4xl mx-auto p-6">
+                  <h2 className="text-xl font-bold text-gray-700 mb-6">{level.name}</h2>
+
+                  {level.topics.length === 0 ? (
+                    <div className="text-center py-16 text-gray-400">
+                      <p className="text-4xl mb-4">📚</p>
+                      <p className="text-lg">Noch keine Themen vorhanden</p>
+                    </div>
+                  ) : level.type === 'matrix' ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {level.topics.map(topic => {
+                        const done = isCompleted(currentSubject, level.id, topic.id);
+                        return (
+                          <div
+                            key={topic.id}
+                            className={`rounded-xl border-2 p-4 cursor-pointer transition-all ${done ? `${colors.bg} ${colors.border}` : 'bg-white border-gray-200 hover:shadow-md'}`}
+                            onClick={() => toggleTopic(currentSubject, level.id, topic.id)}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              {done ? <CheckCircle className={`w-5 h-5 ${colors.text}`} /> : <Circle className="w-5 h-5 text-gray-300" />}
+                              <span className="font-medium text-sm text-gray-700">{topic.topic}</span>
+                            </div>
+                            {topic.task && <p className="text-xs text-gray-400">{topic.task}</p>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {level.topics.map((topic, idx) => {
+                        const done = isCompleted(currentSubject, level.id, topic.id);
+                        return (
+                          <div key={topic.id}>
+                            {topic.checkpoint && idx > 0 && (
+                              <div className="flex items-center gap-2 my-4 text-yellow-600">
+                                <div className="flex-1 h-px bg-yellow-300"></div>
+                                <Star className="w-4 h-4" />
+                                <span className="text-sm font-semibold">Checkpoint</span>
+                                <Star className="w-4 h-4" />
+                                <div className="flex-1 h-px bg-yellow-300"></div>
+                              </div>
+                            )}
+                            {topic.isParkingLot && (
+                              <div className="flex items-center gap-2 my-4 text-gray-400">
+                                <div className="flex-1 h-px bg-gray-200"></div>
+                                <span className="text-sm">🅿️ Parkplatz</span>
+                                <div className="flex-1 h-px bg-gray-200"></div>
+                              </div>
+                            )}
+                            <div
+                              className={`rounded-xl border-2 p-4 cursor-pointer transition-all shadow-sm ${done ? `${colors.bg} ${colors.border}` : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-md'}`}
+                              onClick={() => toggleTopic(currentSubject, level.id, topic.id)}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="mt-0.5 shrink-0">
+                                  {done ? <CheckCircle className={`w-6 h-6 ${colors.text}`} /> : <Circle className="w-6 h-6 text-gray-300" />}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-semibold text-gray-800">{topic.topic}</span>
+                                    {topic.checkpoint && <Award className="w-4 h-4 text-yellow-500" />}
+                                    {topic.hasUpperFloor && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Oberstockwerk</span>}
+                                  </div>
+                                  {topic.task && <p className="text-sm text-gray-500 mt-1">{topic.task}</p>}
+                                  {topic.antonList && <p className="text-xs text-gray-400 mt-1">📋 {topic.antonList}</p>}
+                                </div>
+                                <span className="text-xs text-gray-400 font-mono shrink-0">#{idx + 1}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          // Home view
+          const allTotal = Object.keys(SUBJECT_CONFIGS).reduce((s, k) => s + getProgress(k).total, 0);
+          const allDone  = Object.keys(SUBJECT_CONFIGS).reduce((s, k) => s + getProgress(k).completed, 0);
+          const allPct   = allTotal > 0 ? Math.round((allDone / allTotal) * 100) : 0;
+
           return (
-            <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 p-8">
-              <div className="max-w-4xl mx-auto text-center">
-                <h1 className="text-5xl font-bold text-gray-800 mb-4">🎓 Meine Lernzeit</h1>
-                <p className="text-xl text-gray-600 mb-8">Tool wird geladen...</p>
-                <p className="text-sm text-gray-500">Falls diese Nachricht bestehen bleibt, lade die Seite neu.</p>
+            <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 p-6">
+              <div className="max-w-4xl mx-auto">
+                <div className="text-center mb-10">
+                  <h1 className="text-5xl font-bold text-gray-800 mb-2">🎓 Meine Lernzeit</h1>
+                  <p className="text-gray-500">Wähle ein Fach und starte dein Lernabenteuer!</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+                  {Object.entries(SUBJECT_CONFIGS).map(([key, subject]) => {
+                    const colors = COLOR_MAP[subject.color];
+                    const { total, completed } = getProgress(key);
+                    const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+                    return (
+                      <div
+                        key={key}
+                        className={`bg-white rounded-2xl shadow-lg border-2 ${colors.border} p-6 cursor-pointer hover:shadow-xl transition-all hover:-translate-y-1`}
+                        onClick={() => { setCurrentSubject(key); setCurrentView('subject'); }}
+                      >
+                        <div className="text-5xl mb-3 text-center">{subject.icon}</div>
+                        <h2 className={`text-xl font-bold ${colors.text} text-center mb-4`}>{subject.name}</h2>
+                        {total > 0 && (
+                          <>
+                            <div className="flex justify-between text-sm text-gray-500 mb-1">
+                              <span>{completed} / {total} Themen</span>
+                              <span>{pct}%</span>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-2">
+                              <div className={`${colors.progress} h-2 rounded-full transition-all`} style={{ width: `${pct}%` }}></div>
+                            </div>
+                          </>
+                        )}
+                        {completed === total && total > 0 && (
+                          <div className="mt-3 flex items-center justify-center gap-1 text-yellow-500">
+                            <Trophy className="w-4 h-4" />
+                            <span className="text-sm font-semibold">Abgeschlossen!</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="bg-white rounded-2xl shadow p-6 text-center">
+                  <h3 className="text-lg font-bold text-gray-700 mb-3">🏆 Gesamtfortschritt</h3>
+                  <div className="flex justify-between text-sm text-gray-500 mb-2">
+                    <span>{allDone} von {allTotal} Themen abgeschlossen</span>
+                    <span>{allPct}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-3">
+                    <div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-3 rounded-full transition-all" style={{ width: `${allPct}%` }}></div>
+                  </div>
+                </div>
               </div>
             </div>
           );
